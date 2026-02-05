@@ -1,6 +1,9 @@
 from sqlalchemy.orm import Session
 from models.message_translation import MessageTranslation
-from ai.translator import translate
+from services.gemma_translate import translate_with_gemini
+
+
+
 
 def translate_if_needed(
     db: Session,
@@ -15,7 +18,7 @@ def translate_if_needed(
 
     # 2️⃣ LIVE WEBSOCKET CASE (no message_id yet) → DO NOT CACHE
     if message_id is None:
-        return translate(
+        return translate_with_gemini(
             text=original_text,
             source_lang=source_lang,
             target_lang=target_lang,
@@ -35,7 +38,7 @@ def translate_if_needed(
         return cached.translated_text
 
     # 4️⃣ Translate + persist
-    translated = translate(
+    translated = translate_with_gemini(
         text=original_text,
         source_lang=source_lang,
         target_lang=target_lang,

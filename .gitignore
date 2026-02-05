@@ -118,3 +118,4 @@ pgdata/
 .DS_Store
 .vscode/
 .idea/
+backend/model_files/

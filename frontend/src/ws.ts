@@ -2,38 +2,30 @@ import { state } from "./state";
 
 export function connectWS(
   roomId: string,
-  language: string,
+  language:string,
   onMessage: (msg: any) => void
 ) {
-  const url = `ws://localhost:8001/ws/${roomId}?token=${state.token}&lang=${language}`;
-
-  console.log("🔌 Connecting WS:", url);
-
-  const ws = new WebSocket(url);
+  const ws = new WebSocket(
+    `ws://127.0.0.1:8000/ws/${roomId}?token=${state.token}&lang=${language}`
+  );
 
   ws.onopen = () => {
-    console.log("✅ WS connected");
+    console.log("WS connected");
   };
 
-  ws.onclose = (e) => {
-    console.log("❌ WS closed", e.code, e.reason);
+  ws.onclose = () => {
+    console.log("WS closed");
   };
 
-  ws.onerror = (e) => {
-    console.error("🚨 WS error", e);
+  ws.onerror = () => {
+    console.log("WS error");
   };
 
   ws.onmessage = (e) => {
-    console.log("📩 WS raw message:", e.data);
-
-    try {
-      const parsed = JSON.parse(e.data);
-      console.log("📦 WS parsed message:", parsed);
-      onMessage(parsed);
-    } catch (err) {
-      console.error("❌ WS JSON parse failed", err);
-    }
+    const data = JSON.parse(e.data);
+    onMessage(data);
   };
 
   return ws;
 }
+
