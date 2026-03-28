@@ -18,7 +18,7 @@ def get_db():
 
 
 @router.get("/{room_id}", response_model=list[MessageOut])
-def get_room_messages(
+async def get_room_messages(
     room_id: str,
     lang: str = Query("en"),
     db: Session = Depends(get_db),
@@ -33,7 +33,7 @@ def get_room_messages(
     response = []
 
     for m in messages:
-        translated_text = translate_if_needed(
+        translated_text = await translate_if_needed(
             db=db,
             message_id=m.id,
             original_text=m.original_text,
