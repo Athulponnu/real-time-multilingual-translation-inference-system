@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Header
 from sqlalchemy.orm import Session
 from core.database import SessionLocal
 from models.message import Message
@@ -18,9 +18,10 @@ def get_db():
 
 
 @router.get("/{room_id}", response_model=list[MessageOut])
-def get_room_messages(
+async def get_room_messages(
     room_id: str,
     lang: str = Query("en"),
+    x_user_api_key: str | None = Header(default=None, alias="X-User-Api-Key"),
     db: Session = Depends(get_db),
 ):
     messages = (
@@ -33,12 +34,13 @@ def get_room_messages(
     response = []
 
     for m in messages:
-        translated_text = translate_if_needed(
+        translated_text = await translate_if_needed(
             db=db,
             message_id=m.id,
             original_text=m.original_text,
             source_lang=m.original_language or "en",
             target_lang=lang,
+            user_api_key=x_user_api_key,
         )
 
         user = db.query(User).filter(User.id == m.sender_id).first()
@@ -48,7 +50,7 @@ def get_room_messages(
                 id=m.id,
                 sender_id=m.sender_id,
                 sender_name=user.email if user else m.sender_id,
-                content=translated_text,          # ✅ THIS IS THE KEY
+                content=translated_text,
                 language=lang,
                 created_at=m.created_at,
             )

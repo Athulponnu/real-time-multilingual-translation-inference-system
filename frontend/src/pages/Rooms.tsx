@@ -43,34 +43,94 @@ export default function Rooms() {
   }, []);
 
   useEffect(() => {
+    if (!state.isAuthenticated()) {
+      navigate("/login");
+      return;
+    }
     fetchRooms();
   }, []);
 
   async function fetchRooms() {
-    const res = await fetch("http://127.0.0.1:8000/rooms", {
-      headers: {
-        Authorization: `Bearer ${state.token}`,
-      },
-    });
+    try {
+      const res = await fetch("http://127.0.0.1:8000/rooms", {
+        headers: {
+          Authorization: `Bearer ${state.token}`,
+        },
+      });
 
-    const data = await res.json();
-    setRooms(data);
+      if (res.status === 401) {
+        state.token = null;
+        navigate("/login");
+        return;
+      }
+
+      if (!res.ok) {
+        console.error("Failed to fetch rooms:", res.status);
+        setRooms([]);
+        return;
+      }
+
+      const data = await res.json();
+      setRooms(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error(err);
+      setRooms([]);
+    }
   }
 
   async function createRoom() {
     if (!roomName.trim()) return;
 
-    const res = await fetch("http://127.0.0.1:8000/rooms", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${state.token}`,
-      },
-      body: JSON.stringify({ name: roomName }),
-    });
+    try {
+      console.log("🚀 Creating room:", roomName);
+      console.log("📋 Token:", state.token ? "Present" : "Missing");
+      
+      const res = await fetch("http://127.0.0.1:8000/rooms", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${state.token}`,
+        },
+        body: JSON.stringify({ name: roomName }),
+      });
 
-    const room = await res.json();
-    navigate(`/chat/${room.id}`);
+      console.log("📨 Response status:", res.status, res.statusText);
+
+      if (!res.ok) {
+        console.error("❌ Request failed with status:", res.status);
+        if (res.status === 401) {
+          console.warn("⚠️ Unauthorized - clearing token");
+          state.token = null;
+          navigate("/login");
+          return;
+        }
+        try {
+          const err = await res.json();
+          console.error("📋 Error response:", err);
+          alert(`Error: ${err.detail || "Failed to create room"}`);
+        } catch {
+          const text = await res.text();
+          console.error("📝 Error text:", text);
+          alert(`Failed to create room: ${res.status} ${res.statusText}`);
+        }
+        return;
+      }
+
+      console.log("✅ Room creation successful");
+      const room = await res.json();
+      console.log("🎯 Room data:", room);
+      
+      if (room && room.id) {
+        console.log("🔀 Navigating to chat:", room.id);
+        navigate(`/chat/${room.id}`);
+      } else {
+        console.error("❌ No room ID in response:", room);
+        alert("Failed to get room details");
+      }
+    } catch (err) {
+      console.error("💥 Network error:", err);
+      alert(`Network error while creating room: ${err instanceof Error ? err.message : "Unknown error"}`);
+    }
   }
 
   function joinByRoomId() {
